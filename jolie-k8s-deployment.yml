@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jolie-sample-deployment
+  labels:
+    app: jolie-sample
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: jolie-sample
+  template:
+    metadata:
+      labels:
+        app: jolie-sample
+    spec:
+      containers:
+      - name: jolie-k8s-sample
+        image: jolie-k8s-sample
+        ports:
+        - containerPort: 8000
+        imagePullPolicy: IfNotPresent

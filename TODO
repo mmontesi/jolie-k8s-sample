@@ -1,0 +1,111 @@
+- nel container mettere server.ol con execution concurrent che oltre al risultato stampa anche env(HOSTNAME)
+- ricreare l'immagine come da doc sito Jolie 
+    docker build -t jolie-k8s-sample .
+    minikube start
+    kubectl apply -f 
+    kubectl get pods
+NAME                                      READY   STATUS             RESTARTS   AGE
+jolie-sample-deployment-dbbc9dd5d-99jcs   0/1     ImagePullBackOff   0          8s
+jolie-sample-deployment-dbbc9dd5d-9x78f   0/1     ImagePullBackOff   0          8s
+
+https://kubernetes.io/docs/tutorials/stateless-application/hello-minikube/#create-a-docker-container-image
+$ eval $(minikube docker-env)
+$ docker build -t jolie-k8s-sample .
+$ docker images
+REPOSITORY                                TAG                 IMAGE ID            CREATED             SIZE
+jolie-k8s-sample                          latest              2df927523a30        6 seconds ago       189MB
+k8s.gcr.io/kube-proxy                     v1.16.2             8454cbe08dc9        2 weeks ago         86.1MB
+k8s.gcr.io/kube-apiserver                 v1.16.2             c2c9a0406787        2 weeks ago         217MB
+k8s.gcr.io/kube-controller-manager        v1.16.2             6e4bffa46d70        2 weeks ago         163MB
+k8s.gcr.io/kube-scheduler                 v1.16.2             ebac1ae204a2        2 weeks ago         87.3MB
+k8s.gcr.io/etcd                           3.3.15-0            b2756210eeab        2 months ago        247MB
+jolielang/jolie                           latest              3b3348bf1cb8        2 months ago        189MB
+k8s.gcr.io/coredns                        1.6.2               bf261d157914        2 months ago        44.1MB
+k8s.gcr.io/kube-addon-manager             v9.0.2              bd12a212f9dc        3 months ago        83.1MB
+k8s.gcr.io/kube-addon-manager             v9.0                119701e77cbc        9 months ago        83.1MB
+k8s.gcr.io/kubernetes-dashboard-amd64     v1.10.1             f9aed6605b81        10 months ago       122MB
+k8s.gcr.io/k8s-dns-sidecar-amd64          1.14.13             4b2e93f0133d        13 months ago       42.9MB
+k8s.gcr.io/k8s-dns-kube-dns-amd64         1.14.13             55a3c5209c5e        13 months ago       51.2MB
+k8s.gcr.io/k8s-dns-dnsmasq-nanny-amd64    1.14.13             6dc8ef8287d3        13 months ago       41.4MB
+k8s.gcr.io/pause                          3.1                 da86e6ba6ca1        22 months ago       742kB
+gcr.io/k8s-minikube/storage-provisioner   v1.8.1              4689081edb10        24 months ago       80.8MB
+
+$ kubectl delete deployment jolie-sample-deployment
+$ kubectl apply -f jolie-k8s-deployment.yml 
+$ kubectl get pods
+NAME                                       READY   STATUS    RESTARTS   AGE
+jolie-sample-deployment-655f8b759d-bmzk7   1/1     Running   0          4s
+jolie-sample-deployment-655f8b759d-mq8cn   1/1     Running   0          4s
+
+$ kubectl describe deployments
+Name:                   jolie-sample-deployment
+Namespace:              default
+CreationTimestamp:      Sun, 03 Nov 2019 15:51:45 +0100
+Labels:                 app=jolie-sample
+Annotations:            deployment.kubernetes.io/revision: 1
+                        kubectl.kubernetes.io/last-applied-configuration:
+                          {"apiVersion":"apps/v1","kind":"Deployment","metadata":{"annotations":{},"labels":{"app":"jolie-sample"},"name":"jolie-sample-deployment",...
+Selector:               app=jolie-sample
+Replicas:               2 desired | 2 updated | 2 total | 2 available | 0 unavailable
+StrategyType:           RollingUpdate
+MinReadySeconds:        0
+RollingUpdateStrategy:  25% max unavailable, 25% max surge
+Pod Template:
+  Labels:  app=jolie-sample
+  Containers:
+   jolie-k8s-sample:
+    Image:        jolie-k8s-sample
+    Port:         8000/TCP
+    Host Port:    0/TCP
+    Environment:  <none>
+    Mounts:       <none>
+  Volumes:        <none>
+Conditions:
+  Type           Status  Reason
+  ----           ------  ------
+  Available      True    MinimumReplicasAvailable
+  Progressing    True    NewReplicaSetAvailable
+OldReplicaSets:  <none>
+NewReplicaSet:   jolie-sample-deployment-655f8b759d (2/2 replicas created)
+Events:
+  Type    Reason             Age    From                   Message
+  ----    ------             ----   ----                   -------
+  Normal  ScalingReplicaSet  2m55s  deployment-controller  Scaled up replica set jolie-sample-deployment-655f8b759d to 2
+
+$ kubectl apply -f jolie-k8s-service.yml 
+$ kubectl get service
+NAME                TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)    AGE
+jolie-k8s-service   ClusterIP   10.102.200.250   <none>        8000/TCP   9s
+kubernetes          ClusterIP   10.96.0.1        <none>        443/TCP    22h
+
+kubectl expose deployment jolie-sample-deployment --type=LoadBalancer --port=8000
+minikube service jolie-sample-deployment
+
+$ kubectl get services
+NAME                      TYPE           CLUSTER-IP      EXTERNAL-IP   PORT(S)          AGE
+jolie-sample-deployment   LoadBalancer   10.109.47.147   <pending>     8000:30095/TCP   13s
+kubernetes                ClusterIP      10.96.0.1       <none>        443/TCP          22h
+mmontesi@mmontesi-linux:~/jolie_k8s_example$ minikube service jolie-sample-deployment
+|-----------|-------------------------|-------------|-----------------------------|
+| NAMESPACE |          NAME           | TARGET PORT |             URL             |
+|-----------|-------------------------|-------------|-----------------------------|
+| default   | jolie-sample-deployment |             | http://192.168.99.100:30095 |
+|-----------|-------------------------|-------------|-----------------------------|
+🎉  Opening service default/jolie-sample-deployment in default browser...
+
+modifcare client.ol 
+Location: "socket://192.168.99.100:30095"
+
+mmontesi@mmontesi-linux:~/jolie_k8s_example$ jolie client.ol 
+jolie-sample-deployment-655f8b759d-mq8cn -> 10
+mmontesi@mmontesi-linux:~/jolie_k8s_example$ jolie client.ol 
+jolie-sample-deployment-655f8b759d-bmzk7 -> 10
+mmontesi@mmontesi-linux:~/jolie_k8s_example$ jolie client.ol 
+jolie-sample-deployment-655f8b759d-mq8cn -> 10
+mmontesi@mmontesi-linux:~/jolie_k8s_example$ jolie client.ol 
+jolie-sample-deployment-655f8b759d-bmzk7 -> 10
+
+
+
+- creare un deployment k8s che tira su un pod con 2 repliche ed un service che espone la 8000
+- da console chiamare il client per vedere che con laci ripetuti cambia l'HOSTNAME
